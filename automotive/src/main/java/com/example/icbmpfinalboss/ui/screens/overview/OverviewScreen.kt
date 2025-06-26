@@ -1,4 +1,4 @@
-package com.example.icbmpfinalboss.ui // Ensure your package name is correct
+package com.example.icbmpfinalboss.ui.screens.overview // Ensure your package name is correct
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -16,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.material3.MaterialTheme
 
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -35,7 +34,7 @@ import com.example.icbmpfinalboss.viewmodel.BmsViewModel
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen(
+fun OverviewScreen(
     bmsViewModel: BmsViewModel = viewModel() // Correct and robust way to get ViewModel
 ) {
     // Collect states from the ViewModel. UI will recompose when these change.
