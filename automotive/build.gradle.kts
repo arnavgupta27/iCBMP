@@ -57,6 +57,10 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.0")
     implementation("androidx.compose.material:material-icons-extended-android:1.6.8")
 
+
+    implementation("com.mapbox.maps:android:11.13.1")
+    implementation("com.mapbox.extension:maps-compose:11.13.1")
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     testImplementation(libs.junit)
