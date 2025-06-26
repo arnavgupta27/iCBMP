@@ -19,8 +19,9 @@ fun AppNavigationRail(navController: NavController) {
     val items = listOf(
         Screen.Overview,
         Screen.FleetDetail,
-        Screen.OtaUpdate,
-        Screen.MapView
+        Screen.MapView,
+        Screen.OtaUpdate
+
     )
 
     NavigationRail(

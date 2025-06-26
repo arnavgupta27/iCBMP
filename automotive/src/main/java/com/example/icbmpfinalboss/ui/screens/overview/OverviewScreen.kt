@@ -14,6 +14,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,25 +26,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel // Correct import for viewModel()
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.icbmpfinalboss.data.BmsData
 import com.example.icbmpfinalboss.viewmodel.BmsViewModel
 
-/**
- * The main screen composable for the Cloud BMS Dashboard.
- * It observes data from the BmsViewModel and displays various BMS metrics and controls.
- */
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OverviewScreen(
-    bmsViewModel: BmsViewModel = viewModel() // Correct and robust way to get ViewModel
+    bmsViewModel: BmsViewModel = viewModel()
 ) {
-    // Collect states from the ViewModel. UI will recompose when these change.
     val bmsData by bmsViewModel.bmsState.collectAsState()
     val isChargingEnabled by bmsViewModel.isChargingEnabled.collectAsState()
     val isBalancingForced by bmsViewModel.isBalancingForced.collectAsState()
 
-    // State to control visibility of a potential info dialog (example of composable state)
     var showInfoDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -68,11 +65,13 @@ fun OverviewScreen(
             }
         }
     ) { paddingValues ->
+        val scrollState = rememberScrollState()
         Column(
             modifier = Modifier
                 .padding(paddingValues)
                 .padding(16.dp)
-                .fillMaxSize(),
+                .fillMaxSize()
+                .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(16.dp) // Spacing between cards/sections
         ) {
             // Battery Summary Card
@@ -196,9 +195,6 @@ fun SocLineChart(history: List<Float>) {
     }
 }
 
-/**
- * Displays a horizontal bar chart for individual cell voltages.
- */
 @Composable
 fun CellVoltageBarChart(cellVoltages: List<Float>) {
     Card(
@@ -296,17 +292,4 @@ fun ControlPanel(
             }
         }
     }
-}
-@Preview(showBackground = true)
-@Composable
-fun BatterySummaryCardPreview() {
-    val dummyData = BmsData(
-        stateOfCharge = 78.5f,
-        voltage = 400.3f,
-        current = 45.0f,
-        temperature = 36.2f,
-        socHistory = listOf(70f, 72f, 74f, 76f, 78f),
-        cellVoltages = List(6) { 3.7f }
-    )
-    BatterySummaryCard(data = dummyData)
 }

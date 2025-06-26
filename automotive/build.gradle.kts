@@ -18,7 +18,6 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures {
-        // This flag is required to enable Jetpack Compose for the module [1]
         compose = true
     }
 
@@ -57,7 +56,6 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.0")
     implementation("androidx.compose.material:material-icons-extended-android:1.6.8")
-
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

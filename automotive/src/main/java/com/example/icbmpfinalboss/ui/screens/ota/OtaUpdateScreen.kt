@@ -11,6 +11,6 @@ import com.example.icbmpfinalboss.ui.navigation.Screen
 @Composable
 fun OtaUpdateScreen() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = "Fleet Detail Screen")
+        Text(text = "OTA Update here ^-^")
     }
 }
