@@ -1,36 +1,31 @@
 package com.example.icbmpfinalboss.data
 
 
+import com.example.icbmpfinalboss.data.models.BmsData
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlin.random.Random
 
-/**
- * Offline Repository for fetching BMS data.
- * This class simulates a real-time data stream locally without any network calls.
- */
+//for simulation of data for overview screen
 class BmsRepository {
 
     private var socHistory = mutableListOf<Float>()
 
-    // Creates a Flow that emits new BmsData every 2 seconds.
     fun getBmsDataStream(): Flow<BmsData> = flow {
-        // Initialize with some default data
         if (socHistory.isEmpty()) {
-            socHistory.addAll(List(20) { 80f + Random.nextFloat() * 5 })
+            socHistory.addAll(List(20) { 80f + Random.nextFloat() * 10 })
         }
 
         while (true) {
             emit(generateMockBmsData())
-            delay(2000) // Emit new data every 2 seconds
+            delay(1000)
         }
     }
 
-    // Generates a new set of random mock BMS data.
     private fun generateMockBmsData(): BmsData {
         val lastSoc = socHistory.lastOrNull() ?: 85f
-        val currentSoc = (lastSoc - Random.nextFloat() * 0.2f).coerceIn(30f, 95f)
+        val currentSoc = (lastSoc - Random.nextFloat() * 0.5f).coerceIn(30f, 95f)
 
         socHistory.add(currentSoc)
         if (socHistory.size > 30) {

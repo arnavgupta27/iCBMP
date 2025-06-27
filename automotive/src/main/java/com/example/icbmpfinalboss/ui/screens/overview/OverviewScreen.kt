@@ -16,6 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,9 +29,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.icbmpfinalboss.data.BmsData
+import com.example.icbmpfinalboss.data.models.BmsData
 import com.example.icbmpfinalboss.viewmodel.BmsViewModel
 
+import androidx.compose.material3.Card // Ensure this import is there
+import androidx.compose.material3.CardDefaults // Ensure this import is there
+import androidx.compose.material3.Icon // Ensure this import is there
+import androidx.compose.material3.Text // Ensure thi
+import androidx.compose.ui.geometry.Offset
+
+import androidx.compose.foundation.layout.IntrinsicSize // NEW Import
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,27 +52,13 @@ fun OverviewScreen(
     var showInfoDialog by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Cloud BMS Dashboard") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary
-                ),
-                actions = {
-                    // Example action button
-                    IconButton(onClick = { showInfoDialog = true }) {
-                        Icon(Icons.Filled.Info, contentDescription = "App Info")
-                    }
-                }
-            )
-        },
-        floatingActionButton = {
-            // Refresh button (data simulation auto-refreshes, but this shows pattern)
-            FloatingActionButton(onClick = { /* BmsViewModel.fetchBmsData() if not auto-refreshing */ }) {
-                Icon(Icons.Filled.Refresh, contentDescription = "Refresh Data")
-            }
-        }
+
+//        floatingActionButton = {
+//            // Refresh button (data simulation auto-refreshes, but this shows pattern)
+//            FloatingActionButton(onClick = { /* BmsViewModel.fetchBmsData() if not auto-refreshing */ }) {
+//                Icon(Icons.Filled.Refresh, contentDescription = "Refresh Data")
+//            }
+//        }
     ) { paddingValues ->
         val scrollState = rememberScrollState()
         Column(
@@ -82,18 +77,8 @@ fun OverviewScreen(
 
             // Cell Voltage Bar Chart
             CellVoltageBarChart(cellVoltages = bmsData.cellVoltages)
-
-            // Control Panel for toggles
-            ControlPanel(
-                isChargingEnabled = isChargingEnabled,
-                isBalancingForced = isBalancingForced,
-                onChargingChanged = { bmsViewModel.setCharging(it) },
-                onBalancingChanged = { bmsViewModel.setBalancing(it) }
-            )
         }
 
-        // --- Example of a Composable controlled by state ---
-        // This AlertDialog is only composed when showInfoDialog is true.
         if (showInfoDialog) {
             AlertDialog(
                 onDismissRequest = { showInfoDialog = false },
@@ -109,28 +94,66 @@ fun OverviewScreen(
     }
 }
 
-/**
- * Displays key battery metrics.
- */
 @Composable
 fun BatterySummaryCard(data: BmsData) {
-    Card(
-        elevation = CardDefaults.cardElevation(4.dp),
-        modifier = Modifier.fillMaxWidth()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp)
+            .height(IntrinsicSize.Min), // Ensures the Row's height is the height of its tallest child
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Battery Summary", style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(16.dp))
-            Row(
-                horizontalArrangement = Arrangement.SpaceAround,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                SummaryItem("SOC", "%.1f%%".format(data.stateOfCharge))
-                SummaryItem("Voltage", "%.1fV".format(data.voltage))
-                SummaryItem("Current", "%.1fA".format(data.current))
-                SummaryItem("Temp", "%.1f°C".format(data.temperature))
-            }
-        }
+        // Each card gets a weight of 1f and fills the max height available to it (the Row's height)
+        BatteryMetricCard(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(), // Make each card fill the height of the Row
+            title = "Avg SoC",
+            value = "78",
+            unit = "%",
+            trend = 2.5f,
+            statusColor = Color(0xFF4CAF50),
+            progress = 0.78f
+        )
+        BatteryMetricCard(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
+            title = "Avg SoH",
+            value = "95",
+            unit = "%",
+            trend = -0.2f,
+            statusColor = Color(0xFF4CAF50),
+            progress = 0.95f
+        )
+        BatteryMetricCard(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
+            title = "Temp",
+            value = "35.2",
+            unit = "°C",
+            trend = 1.1f,
+            statusColor = Color(0xFFFFC107)
+        )
+        BatteryMetricCard(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
+            title = "Voltage",
+            value = "380",
+            unit = "V",
+            statusColor = Color(0xFF2196F3)
+        )
+        BatteryMetricCard(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
+            title = "Current",
+            value = "50",
+            unit = "A",
+            statusColor = Color(0xFFE91E63)
+        )
     }
 }
 
@@ -142,9 +165,6 @@ fun SummaryItem(label: String, value: String) {
     }
 }
 
-/**
- * Draws a line chart for the State of Charge history.
- */
 @Composable
 fun SocLineChart(history: List<Float>) {
     Card(
@@ -253,42 +273,92 @@ fun CellVoltageBarChart(cellVoltages: List<Float>) {
     }
 }
 
-/**
- * Provides toggle switches for basic BMS controls.
- */
+
 @Composable
-fun ControlPanel(
-    isChargingEnabled: Boolean,
-    isBalancingForced: Boolean,
-    onChargingChanged: (Boolean) -> Unit,
-    onBalancingChanged: (Boolean) -> Unit
+fun BatteryMetricCard(
+    modifier: Modifier = Modifier, // Add modifier parameter
+    title: String,
+    value: String,
+    unit: String,
+    trend: Float = 0f,
+    statusColor: Color = MaterialTheme.colorScheme.primary,
+    progress: Float? = null
 ) {
     Card(
-        elevation = CardDefaults.cardElevation(4.dp),
-        modifier = Modifier.fillMaxWidth()
+        // The modifier will be passed from the parent Row (e.g., with weight)
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Control Panel", style = MaterialTheme.typography.titleLarge)
-            Divider(modifier = Modifier.padding(vertical = 8.dp)) // Visual separator
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp) // Reduced spacing
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium, // Smaller font
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
-            // Enable Charging Toggle
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                Text("Enable Charging", style = MaterialTheme.typography.bodyLarge)
-                Switch(checked = isChargingEnabled, onCheckedChange = onChargingChanged)
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.headlineSmall, // Smaller font
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = unit,
+                    style = MaterialTheme.typography.bodySmall, // Smaller font
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 4.dp) // Adjust alignment
+                )
             }
 
-            // Force Balancing Toggle
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Force Balancing", style = MaterialTheme.typography.bodyLarge)
-                Switch(checked = isBalancingForced, onCheckedChange = onBalancingChanged)
+            // Trend Indicator (no changes needed here, it's already compact)
+            if (trend != 0f) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val trendColor = if (trend > 0) Color(0xFF4CAF50) else Color(0xFFF44336)
+                    val trendIcon = if (trend > 0) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown
+                    Icon(
+                        imageVector = trendIcon,
+                        contentDescription = null,
+                        tint = trendColor,
+                        modifier = Modifier.size(18.dp) // Slightly smaller icon
+                    )
+                    Text(
+                        text = "${"%.1f".format(kotlin.math.abs(trend))}%",
+                        style = MaterialTheme.typography.labelSmall, // Smaller font
+                        color = trendColor
+                    )
+                }
+            }
+
+            // Progress Bar (no changes needed here)
+            if (progress != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp) // Thinner bar
+                ) {
+                    drawLine(
+                        color = Color.LightGray,
+                        start = Offset(0f, size.height / 2),
+                        end = Offset(size.width, size.height / 2),
+                        strokeWidth = size.height,
+                        cap = StrokeCap.Round
+                    )
+                    drawLine(
+                        color = statusColor,
+                        start = Offset(0f, size.height / 2),
+                        end = Offset(size.width * progress, size.height / 2),
+                        strokeWidth = size.height,
+                        cap = StrokeCap.Round
+                    )
+                }
             }
         }
     }

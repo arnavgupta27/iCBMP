@@ -1,5 +1,5 @@
 package com.example.icbmpfinalboss.data.models
-
+//model for map data of eVs and charging station
 
 data class Vehicle(
     val id: String,
