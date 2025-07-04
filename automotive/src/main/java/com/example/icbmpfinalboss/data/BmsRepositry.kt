@@ -23,6 +23,10 @@ class BmsRepository {
         }
     }
 
+    // In BmsRepository.kt
+
+    // In BmsRepositry.kt
+
     private fun generateMockBmsData(): BmsData {
         val lastSoc = socHistory.lastOrNull() ?: 85f
         val currentSoc = (lastSoc - Random.nextFloat() * 0.5f).coerceIn(30f, 95f)
@@ -33,13 +37,22 @@ class BmsRepository {
         }
 
         return BmsData(
+            // THE FIX #1: Added the missing bmsId parameter.
+            bmsId = "simulated-bms-id",
+
+            // THE FIX #2: Changed vehicleId from a String to an Int.
+            vehicleId = 9999,
+
+            // No changes needed for the rest of your simulation logic.
+            driver = "Simulated Driver",
             stateOfCharge = currentSoc,
             stateOfHealth = 99.5f - (100f - currentSoc) / 15f,
             voltage = 380f + (currentSoc / 10f),
-            current = -5.5f - Random.nextFloat() * 2, // Simulating discharge
+            current = -5.5f - Random.nextFloat() * 2,
             temperature = 31.5f + Random.nextFloat() * 3,
             cellVoltages = List(6) { 3.60f + Random.nextFloat() * 0.05f },
             socHistory = socHistory.toList()
         )
     }
+
 }

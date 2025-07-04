@@ -1,3 +1,5 @@
+// File: app/src/main/java/com/example/icbmpfinalboss/ui/screens/overview/OverviewScreen.kt
+
 package com.example.icbmpfinalboss.ui.screens.overview
 
 import androidx.compose.animation.core.animateFloatAsState
@@ -9,15 +11,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -30,63 +31,70 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.icbmpfinalboss.data.models.BmsData
-import com.example.icbmpfinalboss.viewmodel.BmsViewModel
+import com.example.icbmpfinalboss.viewmodel.BmsUiState // IMPORTANT: Import the new state class
+import com.example.icbmpfinalboss.viewmodel.FleetViewModel
 
-// Imports for the old Alert Center are no longer needed
-// We'll use Badge and BadgedBox from Material 3
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OverviewScreen(
-    bmsViewModel: BmsViewModel = viewModel()
+    fleetViewModel: FleetViewModel = viewModel()
 ) {
-    val bmsData by bmsViewModel.bmsState.collectAsState()
-    var showInfoDialog by remember { mutableStateOf(false) }
+    val uiState by fleetViewModel.overviewState.collectAsState()
 
     Scaffold { paddingValues ->
-        val scrollState = rememberScrollState()
-        Column(
+        Box(
             modifier = Modifier
                 .padding(paddingValues)
-                .padding(horizontal = 24.dp, vertical = 16.dp)
-                .fillMaxSize()
-                .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+                .fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Dashboard Overview", style = MaterialTheme.typography.headlineMedium)
-                AlertCenter() // This now triggers a Dialog
-            }
-
-            BatterySummaryCard(data = bmsData)
-            SocLineChart(history = bmsData.socHistory)
-            CellVoltageBarChart(cellVoltages = bmsData.cellVoltages)
-        }
-
-        if (showInfoDialog) {
-            AlertDialog(
-                onDismissRequest = { showInfoDialog = false },
-                title = { Text("App Information") },
-                text = { Text("This is a simulated Battery Management System (BMS) Dashboard. Data updates in real-time.") },
-                confirmButton = {
-                    TextButton(onClick = { showInfoDialog = false }) {
-                        Text("OK")
-                    }
+            when (val state = uiState) {
+                is BmsUiState.Loading -> {
+                    CircularProgressIndicator()
                 }
-            )
+                is BmsUiState.Error -> {
+                    Text(
+                        text = "Failed to load data: ${state.message}",
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+                is BmsUiState.Success -> {
+                    DashboardContent(bmsData = state.data)
+                }
+            }
         }
     }
 }
 
-// MODIFIED: Alert Center now launches a large Dialog
+@Composable
+fun DashboardContent(bmsData: BmsData) {
+    val scrollState = rememberScrollState()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp, vertical = 16.dp)
+            .verticalScroll(scrollState),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Dashboard Overview", style = MaterialTheme.typography.headlineMedium)
+            AlertCenter()
+        }
+        BatterySummaryCard(data = bmsData)
+        SocLineChart(history = bmsData.socHistory ?: emptyList())
+        CellVoltageBarChart(cellVoltages = bmsData.cellVoltages?: emptyList())
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlertCenter() {
     var showDialog by remember { mutableStateOf(false) }
-    // Use mutableStateListOf to allow for removing items
     val notifications = remember {
         mutableStateListOf(
             "High Temperature Warning: Cell Block A",
@@ -121,18 +129,16 @@ fun AlertCenter() {
             onDismiss = { showDialog = false },
             onClear = { notification -> notifications.remove(notification) },
             onAcknowledge = { notification ->
-                // For now, acknowledging just clears it.
-                // Later, this could change an item's state (e.g., its color) instead of removing it.
                 notifications.remove(notification)
             }
         )
     }
 }
 
-// NEW: A large dialog for displaying alerts
+// THIS IS THE FIX. Note that 'List' is now 'List<String>'.
 @Composable
 fun AlertsDialog(
-    notifications: List<String>,
+    notifications: List<String>, // CORRECTED: Was 'List', now 'List<String>'
     onDismiss: () -> Unit,
     onAcknowledge: (String) -> Unit,
     onClear: (String) -> Unit
@@ -140,13 +146,12 @@ fun AlertsDialog(
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
-                .fillMaxWidth(0.95f) // Covers most of the width
-                .fillMaxHeight(0.85f), // Covers most of the height
+                .fillMaxWidth(0.95f)
+                .fillMaxHeight(0.85f),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Dialog Header
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -161,7 +166,6 @@ fun AlertsDialog(
                 }
                 Divider(modifier = Modifier.padding(horizontal = 16.dp))
 
-                // List of notifications
                 if (notifications.isEmpty()) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -174,6 +178,7 @@ fun AlertsDialog(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        // Because the list type is now known, this 'items' block will no longer have errors.
                         items(items = notifications, key = { it }) { notification ->
                             NotificationItem(
                                 notificationText = notification,
@@ -188,7 +193,6 @@ fun AlertsDialog(
     }
 }
 
-// NEW: Composable for a single notification item with actions
 @Composable
 fun NotificationItem(
     notificationText: String,
@@ -213,12 +217,10 @@ fun NotificationItem(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // "Acknowledge" could be a less prominent button
                 TextButton(onClick = onAcknowledge) {
                     Text("Acknowledge")
                 }
                 Spacer(modifier = Modifier.width(8.dp))
-                // "Clear" is a primary action
                 Button(onClick = onClear) {
                     Text("Clear")
                 }
@@ -227,7 +229,6 @@ fun NotificationItem(
     }
 }
 
-// --- NO CHANGES to the components below this line ---
 @Composable
 fun BatterySummaryCard(data: BmsData) {
     Row(
@@ -239,23 +240,42 @@ fun BatterySummaryCard(data: BmsData) {
     ) {
         BatteryMetricCard(
             modifier = Modifier.weight(1f).fillMaxHeight(),
-            title = "Avg SoC", value = "78", unit = "%", trend = 2.5f, statusColor = Color(0xFF4CAF50), progress = 0.78f
+            title = "Avg SoC",
+            // CORRECTED: Use data.stateOfCharge
+            value = "%.1f".format(data.stateOfCharge),
+            unit = "%",
+            statusColor = Color(0xFF4CAF50),
+            progress = data.stateOfCharge / 100f
         )
         BatteryMetricCard(
             modifier = Modifier.weight(1f).fillMaxHeight(),
-            title = "Avg SoH", value = "95", unit = "%", trend = -0.2f, statusColor = Color(0xFF4CAF50), progress = 0.95f
+            title = "Avg SoH",
+            // CORRECTED: Use data.stateOfHealth
+            value = "%.1f".format(data.stateOfHealth),
+            unit = "%",
+            statusColor = Color(0xFF4CAF50),
+            progress = data.stateOfHealth / 100f
         )
         BatteryMetricCard(
             modifier = Modifier.weight(1f).fillMaxHeight(),
-            title = "Temp", value = "35.2", unit = "°C", trend = 1.1f, statusColor = Color(0xFFFFC107)
+            title = "Temp",
+            value = "%.1f".format(data.temperature),
+            unit = "°C",
+            statusColor = Color(0xFFFFC107)
         )
         BatteryMetricCard(
             modifier = Modifier.weight(1f).fillMaxHeight(),
-            title = "Voltage", value = "380", unit = "V", statusColor = Color(0xFF2196F3)
+            title = "Voltage",
+            value = "%.1f".format(data.voltage),
+            unit = "V",
+            statusColor = Color(0xFF2196F3)
         )
         BatteryMetricCard(
             modifier = Modifier.weight(1f).fillMaxHeight(),
-            title = "Current", value = "50", unit = "A", statusColor = Color(0xFFE91E63)
+            title = "Current",
+            value = "%.1f".format(data.current),
+            unit = "A",
+            statusColor = Color(0xFFE91E63)
         )
     }
 }
@@ -282,13 +302,16 @@ fun SocLineChart(history: List<Float>) {
             ) {
                 if (history.size > 1) {
                     val path = Path()
-                    val minSoc = 30f
-                    val maxSoc = 100f
+                    val minSoc = history.minOrNull() ?: 0f
+                    val maxSoc = history.maxOrNull() ?: 100f
                     val socRange = (maxSoc - minSoc).coerceAtLeast(1f)
+
                     fun getYCoordinate(soc: Float): Float {
                         return size.height - ((soc - minSoc) / socRange * size.height)
                     }
+
                     path.moveTo(0f, getYCoordinate(history.first()))
+
                     for (i in 1 until history.size) {
                         val x = size.width * (i.toFloat() / (history.size - 1))
                         val y = getYCoordinate(history[i])
@@ -297,7 +320,7 @@ fun SocLineChart(history: List<Float>) {
                     drawPath(
                         path,
                         color = Color.Blue,
-                        style = Stroke(width = 6f, cap = StrokeCap.Round)
+                        style = Stroke(width = 4f, cap = StrokeCap.Round)
                     )
                 }
             }
@@ -320,9 +343,14 @@ fun CellVoltageBarChart(cellVoltages: List<Float>) {
                 verticalAlignment = Alignment.Bottom,
                 contentPadding = PaddingValues(horizontal = 4.dp)
             ) {
+                val minVoltage = cellVoltages.minOrNull() ?: 3.0f
+                val maxVoltage = cellVoltages.maxOrNull() ?: 4.2f
+                val voltageRange = (maxVoltage - minVoltage).coerceAtLeast(0.1f)
+
                 itemsIndexed(cellVoltages) { index, voltage ->
+                    val barHeightFactor = ((voltage - minVoltage) / voltageRange).coerceIn(0f, 1f)
                     val animatedHeight by animateFloatAsState(
-                        targetValue = (voltage - 3.5f).coerceAtLeast(0f) * 400,
+                        targetValue = barHeightFactor,
                         animationSpec = tween(durationMillis = 500)
                     )
                     Column(
@@ -338,7 +366,10 @@ fun CellVoltageBarChart(cellVoltages: List<Float>) {
                         )
                         Spacer(Modifier.height(4.dp))
                         Box(
-                            modifier = Modifier.width(40.dp).height(animatedHeight.dp).background(MaterialTheme.colorScheme.secondary)
+                            modifier = Modifier
+                                .width(40.dp)
+                                .fillMaxHeight(animatedHeight)
+                                .background(MaterialTheme.colorScheme.secondary)
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
