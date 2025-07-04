@@ -2,6 +2,7 @@ package com.example.icbmpfinalboss.ui.screens.fleet
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -9,6 +10,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material3.*
@@ -20,9 +22,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.example.icbmpfinalboss.data.models.BmsData
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.icbmpfinalboss.data.models.BmsData
 import com.example.icbmpfinalboss.viewmodel.FleetListUiState
 import com.example.icbmpfinalboss.viewmodel.FleetViewModel
 
@@ -58,7 +59,6 @@ fun FleetScreen(
                     ) {
                         items(state.fleet, key = { vehicle -> vehicle.bmsId }) { vehicle ->
                             FleetVehicleItem(vehicleData = vehicle) {
-                                // THE FIX #1: Was 'selectedVehicle = it', now correctly uses 'vehicle'
                                 selectedVehicle = vehicle
                             }
                         }
@@ -88,9 +88,7 @@ fun FleetVehicleItem(vehicleData: BmsData, onItemClick: () -> Unit) {
         ) {
             Icon(Icons.Default.DirectionsCar, contentDescription = "Vehicle", modifier = Modifier.size(40.dp))
             Text("Vehicle ID: ${vehicleData.vehicleId}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text("Driver: ${vehicleData.driver ?: "N/A"}", style = MaterialTheme.typography.bodyMedium)
 
-            // THE FIX #2: Call BatteryMeter with the correct parameter 'socPercent'
             BatteryMeter(
                 socPercent = vehicleData.stateOfCharge,
                 modifier = Modifier.height(12.dp).fillMaxWidth(0.7f)
@@ -98,6 +96,8 @@ fun FleetVehicleItem(vehicleData: BmsData, onItemClick: () -> Unit) {
         }
     }
 }
+
+// In FleetScreen.kt
 
 @Composable
 fun FleetVehicleDetailPopup(vehicleData: BmsData, onDismiss: () -> Unit) {
@@ -110,9 +110,7 @@ fun FleetVehicleDetailPopup(vehicleData: BmsData, onDismiss: () -> Unit) {
             shape = MaterialTheme.shapes.large
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                // THE FIX #3: Convert vehicleId (Int) to String for the Text composable.
                 Text(vehicleData.vehicleId.toString(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-
                 Text("BMS: ${vehicleData.bmsId}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(16.dp))
                 Row(
@@ -124,17 +122,9 @@ fun FleetVehicleDetailPopup(vehicleData: BmsData, onDismiss: () -> Unit) {
                     SoCCircularProgressRing(socPercent = vehicleData.stateOfHealth, "SoH")
                 }
                 Text("Estimated range: $rangeKm km", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 8.dp))
-                Spacer(Modifier.height(12.dp))
-                Text("Individual Cell Voltages", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(4.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    vehicleData.cellVoltages?.forEachIndexed { index, voltage ->
-                        BatteryCellIcon(voltage = voltage, index = index)
-                    }
-                }
+
+                // THE FIX: The Spacer, Text, and Row for "Individual Cell Voltages" have been removed.
+
                 Spacer(Modifier.height(24.dp))
                 Button(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
             }
@@ -142,12 +132,15 @@ fun FleetVehicleDetailPopup(vehicleData: BmsData, onDismiss: () -> Unit) {
     }
 }
 
+
+// --- THIS IS THE NEWLY ADDED COMPOSABLE ---
 @Composable
 fun BatteryMeter(socPercent: Float, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .clip(MaterialTheme.shapes.small)
-            .background(MaterialTheme.colorScheme.surface)
+            .clip(RoundedCornerShape(4.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(1.dp, Color.Gray, RoundedCornerShape(4.dp))
     ) {
         Box(
             modifier = Modifier
@@ -156,8 +149,8 @@ fun BatteryMeter(socPercent: Float, modifier: Modifier = Modifier) {
                 .background(
                     color = when {
                         socPercent < 20f -> Color.Red
-                        socPercent <= 50f -> Color.Yellow
-                        else -> Color(0xFF4CAF50)
+                        socPercent <= 50f -> Color(0xFFFFC107) // Orange/Yellow
+                        else -> Color(0xFF4CAF50) // Green
                     }
                 )
         )

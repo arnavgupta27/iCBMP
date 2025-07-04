@@ -50,6 +50,7 @@ class BmsRepository {
             voltage = 380f + (currentSoc / 10f),
             current = -5.5f - Random.nextFloat() * 2,
             temperature = 31.5f + Random.nextFloat() * 3,
+            createdAt = java.time.Instant.now().toString(),
             cellVoltages = List(6) { 3.60f + Random.nextFloat() * 0.05f },
             socHistory = socHistory.toList()
         )
