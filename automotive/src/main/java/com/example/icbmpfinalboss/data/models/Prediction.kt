@@ -36,3 +36,5 @@ data class Probability(
     @SerializedName("Critical")
     val critical: Float
 )
+
+

@@ -4,12 +4,10 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsCar
@@ -18,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -27,12 +26,32 @@ import com.example.icbmpfinalboss.data.models.BmsData
 import com.example.icbmpfinalboss.viewmodel.FleetListUiState
 import com.example.icbmpfinalboss.viewmodel.FleetViewModel
 
+// Convoy imports
+import com.example.icbmpfinalboss.viewmodel.ConvoyViewModel
+import com.example.icbmpfinalboss.viewmodel.ConvoyViewModelFactory
+import com.example.icbmpfinalboss.data.network.ConvoyRepository
+import com.example.icbmpfinalboss.data.network.ConvoyRetrofitProvider
+import com.example.icbmpfinalboss.data.models.ConvoyRecommendation
+
 @Composable
 fun FleetScreen(
     fleetViewModel: FleetViewModel = viewModel()
 ) {
     val uiState by fleetViewModel.fleetListState.collectAsState()
     var selectedVehicle by remember { mutableStateOf<BmsData?>(null) }
+
+    // Convoy ViewModel setup
+    val convoyFactory = remember {
+        ConvoyViewModelFactory(
+            ConvoyRepository(ConvoyRetrofitProvider.convoyApiService)
+        )
+    }
+    val convoyViewModel: ConvoyViewModel = viewModel(factory = convoyFactory)
+
+    LaunchedEffect(Unit) {
+        convoyViewModel.fetchConvoyData()
+    }
+    val convoyRecommendations by convoyViewModel.convoyRecommendations.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
         when (val state = uiState) {
@@ -53,9 +72,12 @@ fun FleetScreen(
                     }
                 } else {
                     LazyVerticalGrid(
-                        columns = GridCells.Adaptive(minSize = 200.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        columns = GridCells.Fixed(5), // Always 5 cards per row
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp)
                     ) {
                         items(state.fleet, key = { vehicle -> vehicle.bmsId }) { vehicle ->
                             FleetVehicleItem(vehicleData = vehicle) {
@@ -67,10 +89,44 @@ fun FleetScreen(
             }
         }
 
+        // Show popup with convoy recommendation if a vehicle is selected
+        val rec = convoyRecommendations.find { it.vehicle_id == selectedVehicle?.vehicleId }
         selectedVehicle?.let { vehicle ->
-            FleetVehicleDetailPopup(vehicleData = vehicle) {
-                selectedVehicle = null
-            }
+            FleetVehicleDetailPopup(
+                vehicleData = vehicle,
+                onDismiss = { selectedVehicle = null },
+                convoyRecommendation = rec,
+                onAcknowledgeConvoyRecommendation = { convoyViewModel.acknowledgeConvoyRecommendation(it) }
+            )
+        }
+    }
+}
+
+
+@Composable
+fun ConvoyRecommendationCard(
+    recommendation: ConvoyRecommendation,
+    onAcknowledge: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .padding(bottom = 4.dp)
+            .fillMaxWidth()
+            .clickable { onAcknowledge() },
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = recommendation.reason,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Action: ${recommendation.action}, Speed: ${recommendation.recommended_speed_kmph} km/h",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }
@@ -97,10 +153,13 @@ fun FleetVehicleItem(vehicleData: BmsData, onItemClick: () -> Unit) {
     }
 }
 
-// In FleetScreen.kt
-
 @Composable
-fun FleetVehicleDetailPopup(vehicleData: BmsData, onDismiss: () -> Unit) {
+fun FleetVehicleDetailPopup(
+    vehicleData: BmsData,
+    onDismiss: () -> Unit,
+    convoyRecommendation: ConvoyRecommendation? = null,
+    onAcknowledgeConvoyRecommendation: ((Int) -> Unit)? = null
+) {
     val chargeKwH = 50.0
     val rangeKm = (vehicleData.stateOfCharge / 100 * chargeKwH / 0.18).toInt()
 
@@ -110,8 +169,27 @@ fun FleetVehicleDetailPopup(vehicleData: BmsData, onDismiss: () -> Unit) {
             shape = MaterialTheme.shapes.large
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(vehicleData.vehicleId.toString(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text("BMS: ${vehicleData.bmsId}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                // Show convoy notification if present
+                if (convoyRecommendation != null) {
+                    ModularPopupConvoyNotification(
+                        recommendation = convoyRecommendation,
+                        onAcknowledge = {
+                            onAcknowledgeConvoyRecommendation?.invoke(convoyRecommendation.vehicle_id)
+                        }
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                Text(
+                    vehicleData.vehicleId.toString(),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "BMS: ${vehicleData.bmsId}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Spacer(Modifier.height(16.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -121,19 +199,71 @@ fun FleetVehicleDetailPopup(vehicleData: BmsData, onDismiss: () -> Unit) {
                     SoCCircularProgressRing(socPercent = vehicleData.stateOfCharge, "SoC")
                     SoCCircularProgressRing(socPercent = vehicleData.stateOfHealth, "SoH")
                 }
-                Text("Estimated range: $rangeKm km", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 8.dp))
-
-                // THE FIX: The Spacer, Text, and Row for "Individual Cell Voltages" have been removed.
-
+                Text(
+                    "Estimated range: $rangeKm km",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 8.dp)
+                )
                 Spacer(Modifier.height(24.dp))
-                Button(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.align(Alignment.End)
+                ) { Text("Close") }
             }
         }
     }
 }
 
+@Composable
+fun ModularPopupConvoyNotification(
+    recommendation: ConvoyRecommendation,
+    onAcknowledge: () -> Unit
+) {
+    val backgroundBrush = Brush.horizontalGradient(
+        colors = listOf(
+            Color(0xCC2196F3), // blue with transparency
+            Color(0xCC1DE9B6)  // teal greenish with transparency
+        )
+    )
 
-// --- THIS IS THE NEWLY ADDED COMPOSABLE ---
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(backgroundBrush, shape = MaterialTheme.shapes.medium)
+            .clickable { onAcknowledge() },
+        shape = MaterialTheme.shapes.medium,
+        elevation = CardDefaults.cardElevation(6.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+    ) {
+        Box(
+            modifier = Modifier
+                .background(backgroundBrush, shape = MaterialTheme.shapes.medium)
+                .padding(12.dp)
+        ) {
+            Column {
+                Text(
+                    text = "Convoy Recommendation",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = recommendation.reason,
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = "Action: ${recommendation.action}, Speed: ${recommendation.recommended_speed_kmph} km/h",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+        }
+    }
+}
+
 @Composable
 fun BatteryMeter(socPercent: Float, modifier: Modifier = Modifier) {
     Box(
@@ -149,8 +279,8 @@ fun BatteryMeter(socPercent: Float, modifier: Modifier = Modifier) {
                 .background(
                     color = when {
                         socPercent < 20f -> Color.Red
-                        socPercent <= 50f -> Color(0xFFFFC107) // Orange/Yellow
-                        else -> Color(0xFF4CAF50) // Green
+                        socPercent <= 50f -> Color(0xFFFFC107)
+                        else -> Color(0xFF4CAF50)
                     }
                 )
         )

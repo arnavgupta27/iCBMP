@@ -38,3 +38,13 @@ object BmsApi {
             .create(BmsApiService::class.java)
     }
 }
+
+
+val convoyApiService: ConvoyApiService by lazy {
+    Retrofit.Builder()
+        .baseUrl("https://n2hsl7lzqy62gur6euiuaolf7u0fdrtr.lambda-url.us-east-1.on.aws/")
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+        .create(ConvoyApiService::class.java)
+}
+

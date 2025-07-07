@@ -27,3 +27,6 @@ data class ChargingStation(
 enum class ChargingStationType {
     Fast, Standard, DCFast
 }
+
+
+

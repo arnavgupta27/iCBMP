@@ -30,6 +30,7 @@ data class CarAlert(
 enum class AlertSeverity {
     LOW, MEDIUM, HIGH
 }
+// sample data in case api data is not fetched . (contingency)
 
 object SampleFleetData {
     val drivers = listOf(
